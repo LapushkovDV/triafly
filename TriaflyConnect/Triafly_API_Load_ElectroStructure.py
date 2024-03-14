@@ -230,6 +230,7 @@ def _load_excel_electroStructure_toTriafly(excel_file):
         _idParent = ''
         # ['ПЭС', '2576583']
         # id_type_element = get_id_catalog_by_value(rspn_TypeElemElectr, 'ПЭС')
+        abonent_name = row['Unnamed: 0']
         element_name = row['Unnamed: 1']
         catalog_ElectroStructure_df,_idParent = get_insert_catalog(triafly_conn, catalog_ElectroStructure_df,registry_ElectroStructure_df, catalog_ElectroStructure,
                        triaflyRegistr_ElectroStructure, _idParent, element_name,rspn_TypeElemElectr, 'ПЭС', '','')
@@ -301,6 +302,15 @@ def _load_excel_electroStructure_toTriafly(excel_file):
         catalog_ElectroStructure_df,_idParent = get_insert_catalog(triafly_conn, catalog_ElectroStructure_df, registry_ElectroStructure_df, catalog_ElectroStructure,
                        triaflyRegistr_ElectroStructure, _idParent, element_name, rspn_TypeElemElectr, name_type_element,unknown_id,'')
 
+        if name_type_element != 'Трансформатор':
+            element_name = abonent_name
+            catalog_ElectroStructure_df, _idParent = get_insert_catalog(triafly_conn, catalog_ElectroStructure_df,
+                                                                        registry_ElectroStructure_df,
+                                                                        catalog_ElectroStructure,
+                                                                        triaflyRegistr_ElectroStructure, _idParent,
+                                                                        element_name, rspn_TypeElemElectr, 'Абонент',
+                                                                        '', '')
+
         # ['Серийный номер ПУ', '2576588'],
         # id_type_element = get_id_catalog_by_value(rspn_TypeElemElectr, 'Серийный номер ПУ')
         if str(row['Серийный номер']) != 'nan':
@@ -331,7 +341,6 @@ def _load_excel_electroStructure_toTriafly(excel_file):
     # print('cur_id = ',cur_id)
     # row_1 = catalog_ElectroStructure_df[(catalog_ElectroStructure_df['prt'] == cur_id)]
     # print('row_1 =', row_1)
-
-
-_load_excel_electroStructure_toTriafly(r'C:\Users\Дмитрий\YandexDisk\Work\Систематика\Энсис АСКУЭ\20240306\Копия Стандартный опросный лист - 2024-03-05T164947.187.xlsx')
-#_load_excel_electroStructure_toTriafly(r'C:\Users\Дмитрий\YandexDisk\Work\Систематика\Энсис АСКУЭ\20240306\Копия Копия Стандартный опросный лист - 2024-03-05T164947.187_test.xlsx')
+file =r'C:\Users\Дмитрий\YandexDisk\Work\Систематика\Энсис АСКУЭ\20240312\Копия Стандартный опросный лист.xlsx'
+# file =r'C:\Users\Дмитрий\YandexDisk\Work\Систематика\Энсис АСКУЭ\20240312\Копия Копия Стандартный опросный лист_еуые.xlsx'
+_load_excel_electroStructure_toTriafly(file)
