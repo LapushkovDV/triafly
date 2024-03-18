@@ -1,5 +1,5 @@
 from netdbclient import Connection
-import Triafly_API_DeleteDuplicates
+# import Triafly_API_DeleteDuplicates
 import pandas as pd
 from IPython.display import display
 import ssl
@@ -32,10 +32,11 @@ def delete_duplicates(_strdate, triafly_conn_delete):
               }
              ]
 
-    print(datetime.datetime.now(),'Ищем дубликаты за', _strdate)
+    print(datetime.datetime.now(),'Загружаем реестр API Э_фактические показания 2 для удаления дублей', _strdate)
     rspn_Registr_Fact = triafly_conn_delete.get_registry(triaflyRegistr_FactwithFiltr, params) ##params это реестр серийных номеров приборов учета
     #print(datetime.datetime.now(),"Получен реестр реестр серийных номеров приборов учета") # Название таблицы
     #display(rspn_Registr_Fact)
+    print(datetime.datetime.now(), 'Ищем дубликаты за', _strdate)
     duplicateRows = rspn_Registr_Fact[rspn_Registr_Fact.duplicated ()]
     #print(duplicateRows)
     #file_name = 'rspn_Registr_Fact.xlsx'
@@ -68,6 +69,19 @@ def check_all_dates():
         datepokaz = datetime.datetime.strptime(row[0], "%d.%m.%Y").date()
         #print(datepokaz)
         delete_duplicates(datepokaz.strftime("%Y-%m-%d"), triafly_conn)
+
+
+def check_one_date(strdate):
+    triafly_url = 'http://194.169.192.155:55556/'
+    triafly_api_key = '8EBEA456a6'
+    ssl._create_default_https_context = ssl._create_unverified_context
+    triafly_conn = Connection(triafly_url, triafly_api_key)
+
+    triaflyReportDataPokazKolvoAbonent = 3700515
+
+    rspn_ReportDataPokazKolvoAbonent = triafly_conn.get(triaflyReportDataPokazKolvoAbonent)
+    print('rspn_ReportDataPokazKolvoAbonent = ', rspn_ReportDataPokazKolvoAbonent)
+    delete_duplicates(strdate, triafly_conn)
 
 def get_value_catalog_by_id(catalog, id):
     # print('get_value_catalog_by_id id = ', id)
@@ -133,14 +147,14 @@ def _load_excel_toTriafly(excel_file):
     print(datetime.datetime.now(),"Получен отчет список получасов с их ID")
 
     #  show structure catalog_ElectroStructure_df.
-    column_list_raw = list(catalog_ElectroStructure_df.columns.values)
-    print(datetime.datetime.now(),'catalog_ElectroStructure_columns = ',column_list_raw)
-    for index, row in catalog_ElectroStructure_df.iterrows():
-        print(datetime.datetime.now(),'catalog_ElectroStructure --------------------------------- ')
-        for column in column_list_raw:
-            print(datetime.datetime.now(),'catalog_ElectroStructure column ', column, '| value = ',row[column])
+    # column_list_raw = list(catalog_ElectroStructure_df.columns.values)
+    # print(datetime.datetime.now(),'catalog_ElectroStructure_columns = ',column_list_raw)
+    # for index, row in catalog_ElectroStructure_df.iterrows():
+    #     print(datetime.datetime.now(),'catalog_ElectroStructure --------------------------------- ')
+    #     for column in column_list_raw:
+    #         print(datetime.datetime.now(),'catalog_ElectroStructure column ', column, '| value = ',row[column])
 
-     # show structure catalog_TipPu_df.
+    # show structure catalog_TipPu_df.
     # column_list_raw = list(catalog_TipPu_df.columns.values)
     # print(datetime.datetime.now(),'catalog_ElectroStructure_columns = ',column_list_raw)
     # for index, row in catalog_TipPu_df.iterrows():
@@ -203,6 +217,8 @@ def _load_excel_toTriafly(excel_file):
             MoreThenP = ''
             listvalue=[]
             if typeelem == type_element_serial_pu: # это абонент
+                MoreThenP09 = 0
+                MoreThenP = 0
 
                 tip_pu_name = get_value_catalog_by_id(rspn_TipPuID, pu_df['Э_Тип ПУ'].values[0])
                 # print('tip_pu_name = ',tip_pu_name)
@@ -254,8 +270,9 @@ def _load_excel_toTriafly(excel_file):
             lpull_list_values.append(dictValue)
             # print(lpull_list_values)
 
-            if len(lpull_list_values) > 9999:
+            if len(lpull_list_values) > 19999:
                 #print(lpull_list_values)
+                print('row ', index)
                 print(datetime.datetime.now(),'Inserting values')
                 # triafly_conn.put(lpull_list_values, triaflyRegistr_Fact2)
                 res = triafly_conn.create_objects(lpull_list_values)
@@ -272,9 +289,9 @@ def _load_excel_toTriafly(excel_file):
 
     # print('Запуск удалений дублей',strdate_list)
 
+    print('Запуск удалений дублей', strdate_list)
     for strdateone in strdate_list:
-        print('Запуск удалений дублей',strdate_list)
-        Triafly_API_DeleteDuplicates.delete_duplicates(datetime.datetime.strptime(strdateone, "%d.%m.%Y").date().strftime("%Y-%m-%d"), triafly_conn)
+        delete_duplicates(datetime.datetime.strptime(strdateone, "%d.%m.%Y").date().strftime("%Y-%m-%d"), triafly_conn)
     #print(column_list_date_time)
     #display(rspn_registry_Abon_PU)
 
@@ -287,8 +304,27 @@ def _load_excel_toTriafly(excel_file):
 
 
 # Произведем новую сессию загрузки данных
-file =r'C:\Users\Дмитрий\YandexDisk\Work\Систематика\Энсис АСКУЭ\20240306\Копия 06.2. ТУ на ПС с показаниями, 30 минут (29) (2).xlsx'
-_load_excel_toTriafly(file)
-file =r'C:\Users\Дмитрий\YandexDisk\Work\Систематика\Энсис АСКУЭ\20240306\Копия 06.2. ТУ на ПС с показаниями, 30 минут (29) (1).xlsx'
+
+# file =r'C:\Users\Дмитрий\YandexDisk\Work\Систематика\Энсис АСКУЭ\20240306\Копия 06.2. ТУ на ПС с показаниями, 30 минут (29) (2).xlsx'
+# _load_excel_toTriafly(file)
+# file =r'C:\Users\Дмитрий\YandexDisk\Work\Систематика\Энсис АСКУЭ\20240306\Копия 06.2. ТУ на ПС с показаниями, 30 минут (29) (1).xlsx'
+# _load_excel_toTriafly(file)
+# check_one_date('2024-03-12')
+
+
+# file =r'C:\Users\Дмитрий\YandexDisk\Work\Систематика\Энсис АСКУЭ\20240315\06.2. ТУ на ПС с показаниями, 30 минут (1).xlsx'
+# _load_excel_toTriafly(file)
+# file =r'C:\Users\Дмитрий\YandexDisk\Work\Систематика\Энсис АСКУЭ\20240315\06.2. ТУ на ПС с показаниями, 30 минут (2).xlsx'
+# _load_excel_toTriafly(file)
+# file =r'C:\Users\Дмитрий\YandexDisk\Work\Систематика\Энсис АСКУЭ\20240315\06.2. ТУ на ПС с показаниями, 30 минут (3).xlsx'
+# _load_excel_toTriafly(file)
+# file =r'C:\Users\Дмитрий\YandexDisk\Work\Систематика\Энсис АСКУЭ\20240315\06.2. ТУ на ПС с показаниями, 30 минут (4).xlsx'
+# _load_excel_toTriafly(file)
+# file =r'C:\Users\Дмитрий\YandexDisk\Work\Систематика\Энсис АСКУЭ\20240315\06.2. ТУ на ПС с показаниями, 30 минут (5).xlsx'
+# _load_excel_toTriafly(file)
+# file =r'C:\Users\Дмитрий\YandexDisk\Work\Систематика\Энсис АСКУЭ\20240315\06.2. ТУ на ПС с показаниями, 30 минут.xlsx'
+# _load_excel_toTriafly(file)
+
+
+
 # check_all_dates()
-_load_excel_toTriafly(file)
