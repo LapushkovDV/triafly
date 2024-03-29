@@ -1,10 +1,11 @@
 from netdbclient import Connection
+import glob
 import Triafly_API_DeleteDuplicates
 import pprint
 import pandas as pd
 from IPython.display import display
 import ssl
-
+import os
 import datetime
 import re
 
@@ -18,7 +19,7 @@ def get_id_catalog_by_value(catalog, value):
             return one_elem[1]
     return ''
 def getnamecatalogtosearch(registry_ElectroStructure_df, parentid, element_name):
-    print('getnamecatalogtosearch element_name =', element_name)
+    # print('getnamecatalogtosearch element_name =', element_name)
     element_name = str(element_name)
     if parentid == '':
         _row = registry_ElectroStructure_df[
@@ -34,7 +35,7 @@ def getnamecatalogtosearch(registry_ElectroStructure_df, parentid, element_name)
         return _row['Название'].values[0], True
 
 def get_insert_catalog(triafly_conn, catalog_ElectroStructure_df, registry_ElectroStructure_df, catalog_ElectroStructure,
-                       triaflyRegistr_ElectroStructure, parentid, element_name, rspn_TypeElemElectr, name_type_element,unknown_id, _type_PU, strdate):
+                       triaflyRegistr_ElectroStructure, parentid, element_name, rspn_TypeElemElectr, name_type_element,unknown_id, _type_PU, strdate, addres):
     # header_row = catalog_ElectroStructure_df[(catalog_ElectroStructure_df['prt'].isna())]
     id_type_element = get_id_catalog_by_value(rspn_TypeElemElectr, name_type_element)
 
@@ -74,7 +75,7 @@ def get_insert_catalog(triafly_conn, catalog_ElectroStructure_df, registry_Elect
                     catalog_ElectroStructure_df['Название'] == element_name))]
 
     #print('header_row = ', _row)
-    print(datetime.datetime.now(),'get_insert_catalog element_name =',element_name)
+    # print(datetime.datetime.now(),'get_insert_catalog element_name =',element_name)
     #print('get_insert_catalog parentid = ',parentid)
     if _row.empty:  # не нашли элемент
         print(datetime.datetime.now(),'not found, inserting')
@@ -108,6 +109,9 @@ def get_insert_catalog(triafly_conn, catalog_ElectroStructure_df, registry_Elect
     # print('_row.index =',_row.index.values[0])
     if strdate != '':
         triafly_conn.update_objects({str(_row.index.values[0]): {'Э_дата установки ПУ': strdate}})
+    # if addres != '':
+    #     triafly_conn.update_objects({str(_row.index.values[0]): {'Э_Структура Адрес': addres}})
+
 
     return catalog_ElectroStructure_df, _row['id'].values[0]
 
@@ -197,28 +201,29 @@ def _load_excel_electroStructure_toTriafly(excel_file):
     unknown_NasPunkt_ID = get_id_catalog_by_value(rspn_ReportNasPunkt_ID, '--не определено--')
     print(datetime.datetime.now(),'получили unknown_NasPunkt_ID = ', unknown_NasPunkt_ID)
     unknown_LineAV = get_id_catalog_by_value(rspn_ReportLineAV, '--не определено--')
-    print(datetime.datetime.now(),'получили unknown_LineAV = ', unknown_LineAV)
+    # print(datetime.datetime.now(),'получили unknown_LineAV = ', unknown_LineAV)
     unknown_TransfAV = get_id_catalog_by_value(rspn_ReportTransfAV, '--не определено--')
-    print(datetime.datetime.now(),'получили unknown_TransfAV = ', unknown_TransfAV)
+    # print(datetime.datetime.now(),'получили unknown_TransfAV = ', unknown_TransfAV)
 
     # df = triafly_conn.get_block(block_or_descrs_list=[10296464,-3], from_set=catalog_ElectroStructure)
     # display(rspn_TypeElemElectr)
     catalog_ElectroStructure_df = triafly_conn.get_set(catalog_ElectroStructure)
     # pprint(catalog_ElectroStructure_df.info())
+
     # print(datetime.datetime.now(),'получили справочник Э_структура электросети')
     #  show structure catalog_ElectroStructure_df.
     column_list_raw = list(catalog_ElectroStructure_df.columns.values)
-    print(datetime.datetime.now(),'catalog_ElectroStructure_columns = ',column_list_raw)
+    # print(datetime.datetime.now(),'catalog_ElectroStructure_columns = ',column_list_raw)
     # for index, row in catalog_ElectroStructure_df.iterrows():
     #     print(datetime.datetime.now(),'catalog_ElectroStructure --------------------------------- ')
     #     for column in column_list_raw:
     #         print(datetime.datetime.now(),'catalog_ElectroStructure column ', column, '| value = ',row[column])
 
     registry_ElectroStructure_df = triafly_conn.get_registry(triaflyRegistr_ElectroStructure)
-    print(datetime.datetime.now(),'Получили реестр Э_Структура сети полная')
+    # print(datetime.datetime.now(),'Получили реестр Э_Структура сети полная')
     #  show structure registry_ElectroStructure_df
     column_list_raw = list(registry_ElectroStructure_df.columns.values)
-    print(datetime.datetime.now(),'registry_ElectroStructure_df_columns = ',column_list_raw)
+    # print(datetime.datetime.now(),'registry_ElectroStructure_df_columns = ',column_list_raw)
 
     # for index, row in registry_ElectroStructure_df.iterrows():
     #     print(datetime.datetime.now(),'catalog_ElectroStructure --------------------------------- ')
@@ -226,8 +231,9 @@ def _load_excel_electroStructure_toTriafly(excel_file):
     #         print(datetime.datetime.now(),'registry_ElectroStructure_df column ', column, '| value = ',row[column])
 
     excel_file_df = pd.read_excel(excel_file, skiprows=range(2), dtype='object')
+    print(excel_file)
     column_list_raw = list(excel_file_df.columns.values)
-    print('column_list_raw =', column_list_raw)
+    # print('column_list_raw =', column_list_raw)
 
     # cells_excel_file_df = excel_file_df[(excel_file_df['Тип ячейки'] == 'Ячейка присоединения')] # сначала пойдем по ячейкам только.. т.к. для трансформаторов какая бубуйня в заполнении
     # print('cells_excel_file_df =', cells_excel_file_df)
@@ -235,7 +241,6 @@ def _load_excel_electroStructure_toTriafly(excel_file):
         # for column in column_list_raw:
         #     print('column ', column, '| value = ',row[column])
 
-        # print('row =', row)
         # print('ПС =',row['ПС'])
         _idParent = ''
         # ['ПЭС', '2576583']
@@ -243,7 +248,7 @@ def _load_excel_electroStructure_toTriafly(excel_file):
         abonent_name = row['Unnamed: 0']
         element_name = row['Unnamed: 1']
         catalog_ElectroStructure_df,_idParent = get_insert_catalog(triafly_conn, catalog_ElectroStructure_df,registry_ElectroStructure_df, catalog_ElectroStructure,
-                       triaflyRegistr_ElectroStructure, _idParent, element_name,rspn_TypeElemElectr, 'ПЭС', '','','')
+                       triaflyRegistr_ElectroStructure, _idParent, element_name,rspn_TypeElemElectr, 'ПЭС', '','','','')
 
         #['ПС', '2576584'],
         # id_type_element = get_id_catalog_by_value(rspn_TypeElemElectr, 'ПС')
@@ -252,7 +257,7 @@ def _load_excel_electroStructure_toTriafly(excel_file):
         else:
             element_name = '-'
         catalog_ElectroStructure_df,_idParent = get_insert_catalog(triafly_conn, catalog_ElectroStructure_df, registry_ElectroStructure_df,catalog_ElectroStructure,
-                       triaflyRegistr_ElectroStructure, _idParent, element_name, rspn_TypeElemElectr, 'ПС','','','')
+                       triaflyRegistr_ElectroStructure, _idParent, element_name, rspn_TypeElemElectr, 'ПС','','','','')
 
         #'Линия/фидер', '2576585']
         # id_type_element = get_id_catalog_by_value(rspn_TypeElemElectr, 'Линия/фидер')
@@ -271,7 +276,7 @@ def _load_excel_electroStructure_toTriafly(excel_file):
                         element_name = 'ф. 15'
 
         catalog_ElectroStructure_df,_idParent = get_insert_catalog(triafly_conn, catalog_ElectroStructure_df,registry_ElectroStructure_df, catalog_ElectroStructure,
-                       triaflyRegistr_ElectroStructure, _idParent, element_name, rspn_TypeElemElectr, 'Линия/фидер','','','')
+                       triaflyRegistr_ElectroStructure, _idParent, element_name, rspn_TypeElemElectr, 'Линия/фидер','','','','')
 
         #['ТП', '2576586']
         # id_type_element = get_id_catalog_by_value(rspn_TypeElemElectr, 'ТП')
@@ -287,7 +292,7 @@ def _load_excel_electroStructure_toTriafly(excel_file):
         #     catalog_ElectroStructure_df,_idParent = get_insert_catalog(triafly_conn, catalog_ElectroStructure_df, registry_ElectroStructure_df,catalog_ElectroStructure,
         #                    triaflyRegistr_ElectroStructure, _idParent, element_name,id_type_element)
         catalog_ElectroStructure_df,_idParent = get_insert_catalog(triafly_conn, catalog_ElectroStructure_df, registry_ElectroStructure_df,catalog_ElectroStructure,
-                       triaflyRegistr_ElectroStructure, _idParent, element_name,rspn_TypeElemElectr, 'ТП',unknown_NasPunkt_ID,'','')
+                       triaflyRegistr_ElectroStructure, _idParent, element_name,rspn_TypeElemElectr, 'ТП',unknown_NasPunkt_ID,'','','')
 
         # id_type_element = get_id_catalog_by_value(rspn_TypeElemElectr, 'Ячейка')
         name_type_element = 'Ячейка'
@@ -310,16 +315,20 @@ def _load_excel_electroStructure_toTriafly(excel_file):
             element_name = '-'
 
         catalog_ElectroStructure_df,_idParent = get_insert_catalog(triafly_conn, catalog_ElectroStructure_df, registry_ElectroStructure_df, catalog_ElectroStructure,
-                       triaflyRegistr_ElectroStructure, _idParent, element_name, rspn_TypeElemElectr, name_type_element,unknown_id,'','')
+                       triaflyRegistr_ElectroStructure, _idParent, element_name, rspn_TypeElemElectr, name_type_element,unknown_id,'','','')
 
         if name_type_element != 'Трансформатор':
             element_name = abonent_name
+            addres = ''
+            if str(row['Адрес ФИАС']) != 'nan':
+                addres = str(row['Адрес ФИАС'])
+
             catalog_ElectroStructure_df, _idParent = get_insert_catalog(triafly_conn, catalog_ElectroStructure_df,
                                                                         registry_ElectroStructure_df,
                                                                         catalog_ElectroStructure,
                                                                         triaflyRegistr_ElectroStructure, _idParent,
                                                                         element_name, rspn_TypeElemElectr, 'Абонент',
-                                                                        '', '','')
+                                                                        '', '','',addres)
 
         # ['Серийный номер ПУ', '2576588'],
         # id_type_element = get_id_catalog_by_value(rspn_TypeElemElectr, 'Серийный номер ПУ')
@@ -348,8 +357,9 @@ def _load_excel_electroStructure_toTriafly(excel_file):
             strdate = str(row['Дата установки'])
             strdate = datetime.datetime.strptime(strdate, "%d.%m.%Y").date().strftime("%Y-%m-%d")
 
+        print('excel_row =', index,' ПУ=',element_name)
         catalog_ElectroStructure_df,_idParent = get_insert_catalog(triafly_conn, catalog_ElectroStructure_df,registry_ElectroStructure_df, catalog_ElectroStructure,
-                       triaflyRegistr_ElectroStructure, _idParent, element_name, rspn_TypeElemElectr, type_element,'', type_PU_id, strdate)
+                       triaflyRegistr_ElectroStructure, _idParent, element_name, rspn_TypeElemElectr, type_element,'', type_PU_id, strdate,'')
 
     # if cur_id = header_row['id'].values[0]
     # print('-----')
@@ -357,6 +367,19 @@ def _load_excel_electroStructure_toTriafly(excel_file):
     # row_1 = catalog_ElectroStructure_df[(catalog_ElectroStructure_df['prt'] == cur_id)]
     # print('row_1 =', row_1)
 # file =r'C:\Users\Дмитрий\YandexDisk\Work\Систематика\Энсис АСКУЭ\20240312\Копия Стандартный опросный лист.xlsx'
-file =r'C:\Users\Дмитрий\YandexDisk\Work\Систематика\Энсис АСКУЭ\20240315\Стандартный опросный лист (2).xlsx'
 
-_load_excel_electroStructure_toTriafly(file)
+print(datetime.datetime.now(),'Обрабатываем файлы "опросный лист"')
+path_attach = "./attachments/"
+path_archive = "./attachments/archive/"
+filedataset = os.listdir(path_attach)
+
+
+for file in filedataset:
+    filefullpath = path_attach+file
+    if os.path.isfile(filefullpath):
+        if filefullpath.endswith('тандартный опросный лист.xlsx'):
+            print(filefullpath)
+            _load_excel_electroStructure_toTriafly(filefullpath)
+            os.replace(path_attach+file, path_archive+file)
+# file =r'C:\Users\Дмитрий\YandexDisk\Work\Систематика\Энсис АСКУЭ\20240320\2024-03-20_181527.723284_Стандартный опросный лист.xlsx'
+# _load_excel_electroStructure_toTriafly(file)

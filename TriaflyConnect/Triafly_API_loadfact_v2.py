@@ -3,7 +3,7 @@ from netdbclient import Connection
 import pandas as pd
 from IPython.display import display
 import ssl
-
+import os
 import datetime
 
 
@@ -22,38 +22,47 @@ def delete_duplicates(_strdate, triafly_conn_delete):
     #
     #           }
     #          ]
+    triaflyRegistr_electro_structfor_filtr = 14752279
+    triaflyRspn_electro_structfor_filtr = triafly_conn_delete.get(triaflyRegistr_electro_structfor_filtr)
+    for one_elem in triaflyRspn_electro_structfor_filtr:
+        # print('one_elem = ', one_elem)
+        triaflyRegistr_FactwithFiltr = 2699280
+        pokazatelDataPokaz = 474283  # Э_дата показаний
+        params = [{
+                      'param_id': pokazatelDataPokaz
+                    , 'param_val': [_strdate]
+                    , 'param_index': 0
+                  },
+                 {
+                      'param_id': 2576577
+                    , 'param_val': [one_elem[1]]
+                    , 'param_index': 0
 
-    triaflyRegistr_FactwithFiltr = 2699280
-    pokazatelDataPokaz = 474283  # Э_дата показаний
-    params = [{
-                  'param_id': pokazatelDataPokaz
-                , 'param_val': [_strdate]
-                , 'param_index': 0
-              }
-             ]
+                 }
+                 ]
 
-    print(datetime.datetime.now(),'Загружаем реестр API Э_фактические показания 2 для удаления дублей', _strdate)
-    rspn_Registr_Fact = triafly_conn_delete.get_registry(triaflyRegistr_FactwithFiltr, params) ##params это реестр серийных номеров приборов учета
-    #print(datetime.datetime.now(),"Получен реестр реестр серийных номеров приборов учета") # Название таблицы
-    #display(rspn_Registr_Fact)
-    print(datetime.datetime.now(), 'Ищем дубликаты за', _strdate)
-    duplicateRows = rspn_Registr_Fact[rspn_Registr_Fact.duplicated ()]
-    #print(duplicateRows)
-    #file_name = 'rspn_Registr_Fact.xlsx'
+        print(datetime.datetime.now(),'Загружаем реестр API Э_фактические показания 2 для удаления дублей ',one_elem, _strdate)
+        rspn_Registr_Fact = triafly_conn_delete.get_registry(triaflyRegistr_FactwithFiltr, params) ##params это реестр серийных номеров приборов учета
+        #print(datetime.datetime.now(),"Получен реестр реестр серийных номеров приборов учета") # Название таблицы
+        #display(rspn_Registr_Fact)
+        print(datetime.datetime.now(), 'Ищем дубликаты по',one_elem,'за', _strdate)
+        duplicateRows = rspn_Registr_Fact[rspn_Registr_Fact.duplicated ()]
+        #print(duplicateRows)
+        #file_name = 'rspn_Registr_Fact.xlsx'
 
-    # saving the excel
-    #duplicateRows.to_excel(file_name)
-    # print('DataFrame is written to Excel File successfully.')
-    #
-    #column_list_raw = list(duplicateRows.columns.values )
-    #
-    list_to_delete = []
-    for index, row in duplicateRows.iterrows():
-        list_to_delete.append(index)
+        # saving the excel
+        #duplicateRows.to_excel(file_name)
+        # print('DataFrame is written to Excel File successfully.')
+        #
+        #column_list_raw = list(duplicateRows.columns.values )
+        #
+        list_to_delete = []
+        for index, row in duplicateRows.iterrows():
+            list_to_delete.append(index)
 
-    if list_to_delete:
-        print(datetime.datetime.now(),'Удялем дубликаты за',_strdate )
-        triafly_conn_delete.delete_objects(list_to_delete)
+        if list_to_delete:
+            print(datetime.datetime.now(),'Удялем дубликаты по',one_elem,'за',_strdate )
+            triafly_conn_delete.delete_objects(list_to_delete)
 
 def check_all_dates():
     triafly_url = 'http://194.169.192.155:55556/'
@@ -76,11 +85,6 @@ def check_one_date(strdate):
     triafly_api_key = '8EBEA456a6'
     ssl._create_default_https_context = ssl._create_unverified_context
     triafly_conn = Connection(triafly_url, triafly_api_key)
-
-    triaflyReportDataPokazKolvoAbonent = 3700515
-
-    rspn_ReportDataPokazKolvoAbonent = triafly_conn.get(triaflyReportDataPokazKolvoAbonent)
-    print('rspn_ReportDataPokazKolvoAbonent = ', rspn_ReportDataPokazKolvoAbonent)
     delete_duplicates(strdate, triafly_conn)
 
 def get_value_catalog_by_id(catalog, id):
@@ -305,26 +309,22 @@ def _load_excel_toTriafly(excel_file):
 
 # Произведем новую сессию загрузки данных
 
-# file =r'C:\Users\Дмитрий\YandexDisk\Work\Систематика\Энсис АСКУЭ\20240306\Копия 06.2. ТУ на ПС с показаниями, 30 минут (29) (2).xlsx'
-# _load_excel_toTriafly(file)
-# file =r'C:\Users\Дмитрий\YandexDisk\Work\Систематика\Энсис АСКУЭ\20240306\Копия 06.2. ТУ на ПС с показаниями, 30 минут (29) (1).xlsx'
-# _load_excel_toTriafly(file)
-# check_one_date('2024-03-12')
-
-
-# file =r'C:\Users\Дмитрий\YandexDisk\Work\Систематика\Энсис АСКУЭ\20240315\06.2. ТУ на ПС с показаниями, 30 минут (1).xlsx'
-# _load_excel_toTriafly(file)
-# file =r'C:\Users\Дмитрий\YandexDisk\Work\Систематика\Энсис АСКУЭ\20240315\06.2. ТУ на ПС с показаниями, 30 минут (2).xlsx'
-# _load_excel_toTriafly(file)
-# file =r'C:\Users\Дмитрий\YandexDisk\Work\Систематика\Энсис АСКУЭ\20240315\06.2. ТУ на ПС с показаниями, 30 минут (3).xlsx'
-# _load_excel_toTriafly(file)
-# file =r'C:\Users\Дмитрий\YandexDisk\Work\Систематика\Энсис АСКУЭ\20240315\06.2. ТУ на ПС с показаниями, 30 минут (4).xlsx'
-# _load_excel_toTriafly(file)
-# file =r'C:\Users\Дмитрий\YandexDisk\Work\Систематика\Энсис АСКУЭ\20240315\06.2. ТУ на ПС с показаниями, 30 минут (5).xlsx'
-# _load_excel_toTriafly(file)
 # file =r'C:\Users\Дмитрий\YandexDisk\Work\Систематика\Энсис АСКУЭ\20240315\06.2. ТУ на ПС с показаниями, 30 минут.xlsx'
 # _load_excel_toTriafly(file)
+print(datetime.datetime.now(),'Обрабатываем файлы "ТУ на ПС с показаниями"')
+path_attach = "./attachments/"
+path_archive = "./attachments/archive/"
+filedataset = os.listdir(path_attach)
 
 
+for file in filedataset:
+    filefullpath = path_attach+file
+    if os.path.isfile(filefullpath):
+        if filefullpath.endswith('ТУ на ПС с показаниями, 30 минут.xlsx'):
+            print(filefullpath)
+            _load_excel_toTriafly(filefullpath)
+            os.replace(path_attach+file, path_archive+file)
 
-# check_all_dates()
+
+check_all_dates()
+

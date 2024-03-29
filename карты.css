@@ -1,0 +1,58 @@
+/*{ Маркер с несколькими кругами */
+.count_child_markers {
+  font-weight: bold;
+    color: blue;
+    font-size: 18px;
+    position: absolute;
+    top: -36px;
+    left: 0px;
+    display: flex;
+          position: absolute;
+    align-items: center;
+    justify-content: center;
+
+}
+.label_tp{
+font-weight: bold;
+    color: blue;
+    width: 90px;
+    height: 15px;
+    border-radius: 50%;
+    position: absolute;
+    top: -85px;
+    left: -40px;
+    padding: 4px;
+    display: flex;
+          position: absolute;
+    font-size: 12px;
+    align-items: center;
+    justify-content: center;
+}
+.markerAbove {
+    width: 16px;
+    height: 15px;
+    border-radius: 50%;
+    position: absolute;
+    top: 20px;
+    padding: 4px;
+    display: flex;
+          position: absolute;
+    font-size: 10px;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+}
+.markerAboveOne {
+    left: -5px;
+    color: #000;
+}
+.markerAboveTwo {
+    left: 20px;
+}
+.markerAboveThree {
+    left: 45px;
+}
+.markerAboveFour {
+    left: 70px;
+}
+/*}*/
