@@ -5,7 +5,9 @@ from IPython.display import display
 import ssl
 import os
 import datetime
-
+import time
+import pprint
+import numpy as np
 
 # Установим параметры подключения к Триафлай и "координаты" хранения времени последней загрузки данных
 
@@ -24,6 +26,8 @@ def delete_duplicates(_strdate, triafly_conn_delete):
     #          ]
     triaflyRegistr_electro_structfor_filtr = 14752279
     triaflyRspn_electro_structfor_filtr = triafly_conn_delete.get(triaflyRegistr_electro_structfor_filtr)
+    # print('triaflyRspn_electro_structfor_filtr=',triaflyRspn_electro_structfor_filtr)
+
     for one_elem in triaflyRspn_electro_structfor_filtr:
         # print('one_elem = ', one_elem)
         triaflyRegistr_FactwithFiltr = 2699280
@@ -46,7 +50,7 @@ def delete_duplicates(_strdate, triafly_conn_delete):
         #print(datetime.datetime.now(),"Получен реестр реестр серийных номеров приборов учета") # Название таблицы
         #display(rspn_Registr_Fact)
         print(datetime.datetime.now(), 'Ищем дубликаты по',one_elem,'за', _strdate)
-        duplicateRows = rspn_Registr_Fact[rspn_Registr_Fact.duplicated ()]
+        duplicateRows = rspn_Registr_Fact[rspn_Registr_Fact.duplicated()]
         #print(duplicateRows)
         #file_name = 'rspn_Registr_Fact.xlsx'
 
@@ -134,14 +138,15 @@ def _load_excel_toTriafly(excel_file):
     triaflyReportPoluchasyID = 498110 # отчет Э_Получасы ID
 
     triaflyRegistr_Fact2 = 2581738 # Э_фактические показания 2
-
+    print(datetime.datetime.now(), 'пытаемся получить справочник Э_структура электросети')
     catalog_ElectroStructure_df = triafly_conn.get_set(catalog_ElectroStructure)
     print(datetime.datetime.now(),'получили справочник Э_структура электросети')
     # catalog_TipPu_df = triafly_conn.get_set(catalog_TipPu)
     # print(datetime.datetime.now(),'получили справочник Э_Тип ПУ')
-
+    print(datetime.datetime.now(), 'пытаемся получить API Э_Тип ПУ ID')
     rspn_TipPuID = triafly_conn.get(triaflyRegistr_TipPuID) # API Э_Тип ПУ ID
     print(datetime.datetime.now(), 'получили реестр API Э_Тип ПУ ID')
+    print(datetime.datetime.now(), 'пытаемся получить Э_тип элемента справочника электросети ID')
     rspn_TypeElemElectr = triafly_conn.get(triaflyRegistr_TypeElemElectr) ##это Э_тип элемента справочника электросети ID
     print(datetime.datetime.now(),'получили Э_тип элемента справочника электросети ID')
     rsp_TipPuFaza = triafly_conn.get(triaflyRegistr_TipPuFaza) # API Э_тип ПУ с фазами и производителем
@@ -168,13 +173,41 @@ def _load_excel_toTriafly(excel_file):
 
     type_element_serial_pu = int(get_id_catalog_by_value(rspn_TypeElemElectr,'Серийный номер ПУ'))
     type_element_transform = int(get_id_catalog_by_value(rspn_TypeElemElectr,'ПУ трансформатора'))
-
-    excel_file_df=pd.read_excel(excel_file, skiprows=range(4), dtype='object')
+    print(datetime.datetime.now(), "Читатем EXCEL-файл", excel_file)
+    # excel_file_df=pd.read_excel(excel_file, skiprows=range(4), dtype='object')
+    excel_file_df = pd.read_excel(excel_file,  dtype='object')
     print(datetime.datetime.now(),"Прочитан EXCEL-файл",excel_file)
 
     excel_file_df = excel_file_df.reset_index()
     column_list_raw = list(excel_file_df.columns.values )
     column_list_date_time =[]
+    pu_list_filtr_all = []
+    pu_list_filtr = []
+
+
+    for index, row in excel_file_df.iterrows():
+
+        if pd.isnull(row['Серийный номер ПУ']):
+            continue
+        typeelem = type_element_serial_pu
+        pu_df = catalog_ElectroStructure_df[
+            ((catalog_ElectroStructure_df['Название'] == str(row['Серийный номер ПУ'])) & (
+                    catalog_ElectroStructure_df['Э_тип элемента справочника электросети'] == typeelem))]
+        if pu_df.empty:
+            typeelem = type_element_transform
+            pu_df = catalog_ElectroStructure_df[
+                ((catalog_ElectroStructure_df['Название'] == str(row['Серийный номер ПУ'])) & (
+                        catalog_ElectroStructure_df['Э_тип элемента справочника электросети'] == typeelem))]
+
+        if pu_df.empty:
+            print('1 !!!!!!!!!!!!!!!!!!!!!!!!!!! не нашли прибор учета!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!',
+                  str(row['Серийный номер ПУ']))
+            # удяляем строку из набора данных
+            excel_file_df.drop(index = excel_file_df.index)
+            continue
+
+        seriap_pu = pu_df['id'].values[0]
+        pu_list_filtr_all.append(str(seriap_pu))
 
     # оставляем только те колонки где дата и время
     for column in column_list_raw:
@@ -184,31 +217,84 @@ def _load_excel_toTriafly(excel_file):
 
     # идем по всем значениям по нужным колонкам
     lpull_list_values = []
+    ldel_list_values=[]
+    lupd_dict_values = {}
     strdate_list = []
     for index, row in excel_file_df.iterrows():
         for column in column_list_date_time:
             strdate = column[:5] + '.' + str(datetime.datetime.now().year)
+            strdate = datetime.datetime.strptime(strdate, "%d.%m.%Y").date().strftime("%Y-%m-%d")
             if not (strdate in strdate_list):
                 strdate_list.append(strdate)
-            strtime = column[-5:]
-            # print(row['Серийный номер ПУ'])
+    print(pu_list_filtr_all)
+    cnt_in_filtr = 25
+    cur_cnt_in_filtr = cnt_in_filtr + 1
+    # for index, row in excel_file_df.iterrows():
+    #     cur_cnt_in_filtr = cur_cnt_in_filtr + 1
+    #     if cur_cnt_in_filtr >= cnt_in_filtr:
+    #         pu_list_filtr = pu_list_filtr_all[index:(index+cnt_in_filtr)]
+    #         print('index=',index)
+    #         print('pu_list_filtr=',pu_list_filtr)
+    #         cur_cnt_in_filtr = 0
+    # qasdasdads
+    for index, row in excel_file_df.iterrows():
+        cur_cnt_in_filtr = cur_cnt_in_filtr + 1
+        if cur_cnt_in_filtr >= cnt_in_filtr:
+            pu_list_filtr = pu_list_filtr_all[index:(index+cnt_in_filtr)]
+            cur_cnt_in_filtr = 0
+            pokazatelDataPokaz = 474283  # Э_дата показаний
+            params = [
+                        {   'param_id': pokazatelDataPokaz
+                          , 'param_val': strdate_list
+                          , 'param_index': 0
+                        },
+                        {'param_id': 2576577
+                            , 'param_val': pu_list_filtr
+                            , 'param_index': 0
+                         }
 
-            typeelem = type_element_serial_pu
+                # pu_list_filtr
+                #         {   'param_id': 2576577
+                #           , 'param_val': [str(seriap_pu)]
+                #           , 'param_index': 0
+                #         }
+                     ]
+
+            # print('strdate_list=',strdate_list)
+            # print('pu_list_filtr=',pu_list_filtr)
+            # print('params=',params)
+            print(datetime.datetime.now(), 'row',index,'API Э_фактические показания 2 для загрузки',
+                  row['Серийный номер ПУ'], strdate_list)
+            rspn_Registr_Fact = triafly_conn.get_registry(18815824, params)
+            print(datetime.datetime.now(), 'end API Э_фактические показания 2 для загрузки')
+            # print(datetime.datetime.now(), 'rspn_Registr_Fact', rspn_Registr_Fact)
+            # pprint(rspn_Registr_Fact.info())
+
+        typeelem = type_element_serial_pu
+        if pd.isnull(row['Серийный номер ПУ']):
+            continue
+        pu_df = catalog_ElectroStructure_df[
+            ((catalog_ElectroStructure_df['Название'] == str(row['Серийный номер ПУ'])) & (
+                    catalog_ElectroStructure_df['Э_тип элемента справочника электросети'] == typeelem))]
+        if pu_df.empty:
+            typeelem = type_element_transform
             pu_df = catalog_ElectroStructure_df[
                 ((catalog_ElectroStructure_df['Название'] == str(row['Серийный номер ПУ'])) & (
                         catalog_ElectroStructure_df['Э_тип элемента справочника электросети'] == typeelem))]
-            if pu_df.empty:
-                typeelem = type_element_transform
-                pu_df = catalog_ElectroStructure_df[
-                    ((catalog_ElectroStructure_df['Название'] == str(row['Серийный номер ПУ'])) & (
-                            catalog_ElectroStructure_df['Э_тип элемента справочника электросети'] == typeelem))]
 
-            if pu_df.empty:
-                print('!!!!!!!!!!!!!!!!!!!!!!!!!!! не нашли прибор учета!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!' , str(row['Серийный номер ПУ']))
-                continue
+        if pu_df.empty:
+            print('2 !!!!!!!!!!!!!!!!!!!!!!!!!!! не нашли прибор учета!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!',
+                  str(row['Серийный номер ПУ']))
+            continue
 
-            seriap_pu = pu_df['id'].values[0]
-            # print('seriap_pu = ', seriap_pu)
+        seriap_pu = pu_df['id'].values[0]
+
+
+        for column in column_list_date_time:
+            strdate = column[:5] + '.' + str(datetime.datetime.now().year)
+            strdate_ = datetime.datetime.strptime(strdate, "%d.%m.%Y").date().strftime("%Y-%m-%d")
+            strtime = column[-5:]
+            # print(row['Серийный номер ПУ'])
             poluChasy_id = get_id_catalog_by_value(rspPoluchasyID, strtime)
             fact_value = row[column]
             # print('fact_value = ', fact_value)
@@ -219,8 +305,8 @@ def _load_excel_toTriafly(excel_file):
             dogovor_power_int = ''
             MoreThenP09 = ''
             MoreThenP = ''
-            listvalue=[]
-            if typeelem == type_element_serial_pu: # это абонент
+
+            if typeelem == type_element_serial_pu:  # это абонент
                 MoreThenP09 = 0
                 MoreThenP = 0
 
@@ -233,50 +319,104 @@ def _load_excel_toTriafly(excel_file):
                 if str(fact_value) != '':
                     if fact_value >= 0:
                         if dogovor_power_int > 0:
-                            if (fact_value >= dogovor_power_int*0.9) and (fact_value <= dogovor_power_int):
+                            if (fact_value >= dogovor_power_int * 0.9) and (fact_value <= dogovor_power_int):
                                 MoreThenP09 = 1
                             if (fact_value >= dogovor_power_int):
                                 MoreThenP = 1
 
-            # listvalue = [ seriap_pu
-            #             , strdate
-            #             , poluChasy_id
-            #             , fact_value
-            #             , typeelem
-            #             , dogovor_power_int
-            #             , int(MoreThenP09)
-            #             , int(MoreThenP)
-            #             ]
+            rspn_Registr_Fact_poluch = rspn_Registr_Fact[((rspn_Registr_Fact['Э_Получасы'] == int(poluChasy_id)) & (rspn_Registr_Fact['Э_Структура электросети'] == int(seriap_pu)))]
+            # print('rspn_Registr_Fact_poluch',rspn_Registr_Fact_poluch)
+            # if rspn_Registr_Fact_poluch.empty:
+            #     print('не нашли серийник почему то pu_list_filtr=',pu_list_filtr,'seriap_pu=',seriap_pu)
+            #     фывфывфы
+            cntfind = 0
+            isneedtoinsert = False
+            for index, rowfact in rspn_Registr_Fact_poluch.iterrows():
+                # print('rowfact[1]', str(rowfact[1])[:10])
+                # print('strdate_', strdate_)
+                # print('str(rowfact[3])', str(rowfact[3]))
+                # print('str(fact_value)', str(fact_value))
+                if strdate_ == str(rowfact[1])[:10]:
+                    cntfind = cntfind + 1
+                    cur_fact_value = str(rowfact[3])
+                    if cur_fact_value == 'nan':
+                        cur_fact_value = ''
+                    if cur_fact_value != str(fact_value) or str(dogovor_power_int) != str(rowfact[5]) or str(MoreThenP09) != str(rowfact[6]) or MoreThenP != str(rowfact[7]):
+                        if fact_value == '':
+                            # print('УДАЛЯЕМ т.к. теперь пустое значение! cur_fact_value=',cur_fact_value,'str(fact_value)=',str(fact_value))
+                            # print('УДАЛЯЕМ т.к. теперь пустое значение! index', index)
+                            ldel_list_values.append(str(index))
+                            # triafly_conn.delete_objects([str(index)])
+                            isneedtoinsert = True
+                        else:
+                            # print('UPDATE! index', index)
 
-            # 2576577
-            dictValue = {
-                 'Э_Структура электросети' : str(seriap_pu)
-                ,'Э_дата показаний'  : datetime.datetime.strptime(strdate, "%d.%m.%Y").date().strftime("%Y-%m-%d")
-                ,'Э_Получасы'      : poluChasy_id
-                # ,'факт кВт'        : fact_value
-                ,'Э_тип элемента справочника электросети' : str(typeelem)
-                # ,'Э_Выделенная мощность по договору, кВт'  : dogovor_power_int if dogovor_power_int == '' else int(dogovor_power_int)
-                  }
-            if fact_value != '':
-                dictValue['факт кВт'] = fact_value
-            if dogovor_power_int != '':
-                dictValue['Э_Выделенная мощность по договору, кВт'] = dogovor_power_int
-            if MoreThenP09 !='':
-                dictValue['Э_Признак показаний абонента ТУ>Р>0,9*ТУ']= MoreThenP09
-            if MoreThenP != '':
-                dictValue['Э_Признак показаний абонента ТУ>Р'] = MoreThenP
+                            dictValue1={}
+                            dictValue1['факт кВт'] = str(fact_value)
+                            if dogovor_power_int != '':
+                                dictValue1['Э_Выделенная мощность по договору, кВт'] = dogovor_power_int
+                            if MoreThenP09 != '':
+                                dictValue1['Э_Признак показаний абонента ТУ>Р>0,9*ТУ'] = MoreThenP09
+                            if MoreThenP != '':
+                                dictValue1['Э_Признак показаний абонента ТУ>Р'] = MoreThenP
+
+                            lupd_dict_values[index] = dictValue1
+                                # .append({str(index): {'факт кВт': str(fact_value)}})
+                            # triafly_conn.update_objects({str(index): {'факт кВт': str(fact_value)}})
+                    if cntfind > 1:
+                        # удаляем дубль
+                        # print('УДАЛЯЕМ дубль! index', index)
+                        ldel_list_values.append(str(index))
+                        # triafly_conn.delete_objects([str(index)])
+                # if cntfind > 0:
+                #     # нашли уже, дальше нет смысла идти
+                #     print('выходим из цикла получасов')
+                #     break
+
+            if cntfind == 0 or isneedtoinsert == True:
+                # нет показаний в триафлае - просто вставляем без проверок
+                # print('seriap_pu = ', seriap_pu)
 
 
-            # print('typeelem =', typeelem)
-            # print('listvalue =',listvalue)
+                # 2576577
+                dictValue = {
+                     'Э_Структура электросети' : str(seriap_pu)
+                    ,'Э_дата показаний'  : datetime.datetime.strptime(strdate, "%d.%m.%Y").date().strftime("%Y-%m-%d")
+                    ,'Э_Получасы'      : poluChasy_id
+                    # ,'факт кВт'        : fact_value
+                    ,'Э_тип элемента справочника электросети' : str(typeelem)
+                    # ,'Э_Выделенная мощность по договору, кВт'  : dogovor_power_int if dogovor_power_int == '' else int(dogovor_power_int)
+                      }
+                if fact_value != '':
+                    dictValue['факт кВт'] = fact_value
+                if dogovor_power_int != '':
+                    dictValue['Э_Выделенная мощность по договору, кВт'] = dogovor_power_int
+                if MoreThenP09 !='':
+                    dictValue['Э_Признак показаний абонента ТУ>Р>0,9*ТУ']= MoreThenP09
+                if MoreThenP != '':
+                    dictValue['Э_Признак показаний абонента ТУ>Р'] = MoreThenP
 
-            # lpull_list_values.append(listvalue)
-            lpull_list_values.append(dictValue)
-            # print(lpull_list_values)
 
-            if len(lpull_list_values) > 19999:
-                #print(lpull_list_values)
-                print('row ', index)
+                # print('typeelem =', typeelem)
+                # print('listvalue =',listvalue)
+
+                # lpull_list_values.append(listvalue)
+                lpull_list_values.append(dictValue)
+                # print(lpull_list_values)
+
+            if len(ldel_list_values) > 999:
+                print(datetime.datetime.now(),'delete values')
+                triafly_conn.delete_objects(ldel_list_values)
+                print(datetime.datetime.now(), 'end delete values')
+                ldel_list_values = []
+            if len(lupd_dict_values) > 999:
+                print(datetime.datetime.now(), 'update values')
+                triafly_conn.update_objects(lupd_dict_values)
+                print(datetime.datetime.now(), 'end update values')
+                lupd_dict_values = {}
+            if len(lpull_list_values) > 9999:
+                # print(lpull_list_values)
+                # print('row ', index)
                 print(datetime.datetime.now(),'Inserting values')
                 # triafly_conn.put(lpull_list_values, triaflyRegistr_Fact2)
                 res = triafly_conn.create_objects(lpull_list_values)
@@ -285,6 +425,17 @@ def _load_excel_toTriafly(excel_file):
                 lpull_list_values = []
         #print(row[column])
     # print(lpull_list_values)
+    if len(ldel_list_values) > 0:
+        print(datetime.datetime.now(), 'delete values')
+        # print('ldel_list_values',ldel_list_values)
+        triafly_conn.delete_objects(ldel_list_values)
+        print(datetime.datetime.now(), 'end delete values')
+    if len(lupd_dict_values) > 0:
+        print(datetime.datetime.now(), 'update values')
+        # print('lupd_dict_values', lupd_dict_values)
+        triafly_conn.update_objects(lupd_dict_values)
+        print(datetime.datetime.now(), 'end update values')
+
     if len(lpull_list_values) > 0 :
         print(datetime.datetime.now(), 'Inserting values')
         # triafly_conn.put(lpull_list_values, triaflyRegistr_Fact2)
@@ -293,9 +444,9 @@ def _load_excel_toTriafly(excel_file):
 
     # print('Запуск удалений дублей',strdate_list)
 
-    print('Запуск удалений дублей', strdate_list)
-    for strdateone in strdate_list:
-        delete_duplicates(datetime.datetime.strptime(strdateone, "%d.%m.%Y").date().strftime("%Y-%m-%d"), triafly_conn)
+    # print('Запуск удалений дублей', strdate_list)
+    # for strdateone in strdate_list:
+    #     delete_duplicates(strdateone, triafly_conn)
     #print(column_list_date_time)
     #display(rspn_registry_Abon_PU)
 
@@ -304,7 +455,68 @@ def _load_excel_toTriafly(excel_file):
     #         triafly_conn([],triaflyRegistr_Fact)
 
 
+def splitexcel(path_attach, excel_file):
+    triafly_url = 'http://194.169.192.155:55556/'
+    triafly_api_key = '8EBEA456a6'
+    ssl._create_default_https_context = ssl._create_unverified_context
+    triafly_conn = Connection(triafly_url, triafly_api_key)
+    print('splitexcel')
 
+    triaflyRegistr_TypeElemElectr = 2576668  # реестр API Э_тип элемента справочника электросети ID
+    catalog_ElectroStructure = 2576576 # справочник Э_структура электросети
+
+    print(datetime.datetime.now(), 'пытаемся получить Э_тип элемента справочника электросети ID')
+    rspn_TypeElemElectr = triafly_conn.get(triaflyRegistr_TypeElemElectr) ##это Э_тип элемента справочника электросети ID
+
+    type_element_serial_pu = int(get_id_catalog_by_value(rspn_TypeElemElectr,'Серийный номер ПУ'))
+    type_element_transform = int(get_id_catalog_by_value(rspn_TypeElemElectr,'ПУ трансформатора'))
+    print(datetime.datetime.now(), 'пытаемся получить справочник Э_структура электросети')
+    catalog_ElectroStructure_df = triafly_conn.get_set(catalog_ElectroStructure)
+    print(datetime.datetime.now(),'получили справочник Э_структура электросети')
+
+    print(datetime.datetime.now(), "Читатем EXCEL-файл", excel_file)
+    excel_file_df = pd.read_excel(excel_file, skiprows=range(4), dtype='object')
+    print(datetime.datetime.now(), "Прочитан EXCEL-файл", excel_file)
+
+    excel_file_df = excel_file_df.reset_index()
+    column_list_raw = list(excel_file_df.columns.values)
+    column_list_date_time = []
+    pu_list_filtr_all = []
+    pu_list_filtr = []
+
+
+    index_names = excel_file_df[excel_file_df['Серийный номер ПУ'] == 'нет ПУ'].index
+    print('net pu index_names=',index_names)
+    excel_file_df.drop(index_names, inplace=True)
+
+    for index, row in excel_file_df.iterrows():
+        if pd.isnull(row['Серийный номер ПУ']):
+            excel_file_df.drop(index = row.index)
+            continue
+
+        typeelem = type_element_serial_pu
+        pu_df = catalog_ElectroStructure_df[
+            ((catalog_ElectroStructure_df['Название'] == str(row['Серийный номер ПУ'])) & (
+                    catalog_ElectroStructure_df['Э_тип элемента справочника электросети'] == typeelem))]
+        if pu_df.empty:
+            typeelem = type_element_transform
+            pu_df = catalog_ElectroStructure_df[
+                ((catalog_ElectroStructure_df['Название'] == str(row['Серийный номер ПУ'])) & (
+                        catalog_ElectroStructure_df['Э_тип элемента справочника электросети'] == typeelem))]
+        if pu_df.empty:
+            print('1 !!!!!!!!!!!!!!!!!!!!!!!!!!! не нашли прибор учета!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!',
+                  str(row['Серийный номер ПУ']))
+            # удяляем строку из набора данных
+            excel_file_df.drop(index = excel_file_df.index)
+            continue
+    cnt_rows_to_split = 100
+    for i in range(0, len(excel_file_df.index), cnt_rows_to_split):
+        excel_file_df_split = excel_file_df[i:(i + cnt_rows_to_split)]
+        filename = excel_file + '_' + str(i) + '_split_.xlsx'
+        if os.path.exists(filename):
+            os.remove(filename)
+        excel_file_df_split.to_excel(filename)
+        # print('excel_file_df_split',excel_file_df_split)
 
 
 # Произведем новую сессию загрузки данных
@@ -317,14 +529,27 @@ path_archive = "./attachments/archive/"
 filedataset = os.listdir(path_attach)
 
 
+
+# _load_excel_toTriafly("./attachments/2024-04-05_130248.977648_06. Ту на ПС с показаниями, 30 минут.xlsx")
+
+
 for file in filedataset:
     filefullpath = path_attach+file
     if os.path.isfile(filefullpath):
-        if filefullpath.endswith('ТУ на ПС с показаниями, 30 минут.xlsx'):
+        if filefullpath.endswith('ТУ на ПС с показаниями, 30 минут.xlsx') or filefullpath.endswith('Ту на ПС с показаниями, 30 минут.xlsx'):
+            print(filefullpath)
+            splitexcel(path_attach,filefullpath)
+            os.replace(path_attach+file, path_archive+file)
+
+for file in filedataset:
+    filefullpath = path_attach+file
+    if os.path.isfile(filefullpath):
+        if filefullpath.endswith('_split_.xlsx'):
             print(filefullpath)
             _load_excel_toTriafly(filefullpath)
             os.replace(path_attach+file, path_archive+file)
 
 
-check_all_dates()
+
+#check_all_dates()
 

@@ -1,0 +1,50 @@
+/*{ Добавление новых маркеров для карт Несколько кругов  mapIconTitle*/
+var maps = window.NetDB.namespace('maps');
+
+maps.registerMarkerType({
+    slug: 'several_circle',
+    name: 'Несколько кругов',
+    size: 60,
+    icon: function (cluster, features, legend) {
+        let data = features.collectProperties(cluster.getAllChildMarkers()),
+            childMarkers = cluster.getAllChildMarkers(),
+            customColor,
+            sum,
+            value,    
+            colors = features._initColors();
+        _.each(data, prop => {            
+            if (prop.value) {
+                customColor = prop.color || colors[prop.name];
+                sum = (sum || 0) + prop.value;
+                value = prop.value;
+            }
+          console.log('prop', prop);
+          console.log('childMarkers',childMarkers);
+        });
+        console.log('data', data);
+        var iconSettings = {
+            mapIconUrl: '<svg xmlns="http://www.w3.org/2000/svg" transform="translate(-20,-40)" width="48" height="48" viewBox="0 0 48 48"' +
+                        ' style="width: 48px; height: 48px; transform: translate(-20px,-40px);" >' +
+                        '<g transform="scale(0.6)"><ellipse cx="41" cy="75" rx="10" ry="5" fill="grey" style="cursor: pointer;" opacity="0.6"></ellipse>' +
+                        '<path fill="#2c84cb" d="M38.9988 73.2875L40.7863 75.2375L42.7363 73.2875C43.7113 71.9875 67.5988 44.85 67.5988 30.7125C67.5988' +
+                        '15.925 55.5738 4.0625 40.9488 4.0625C26.1613 4.0625 14.2988 16.0875 14.2988 30.7125C14.2988 44.85 38.1863 72.15 38.9988 73.2875Z" style=""></path>' +
+                        '<circle cx="41" cy="31" r="19" fill="white"></circle>' +
+                        '</g>' +
+                        '{mapIconTitle}' +
+                        '</svg>',
+            mapIconColor: customColor ? customColor : '#2c84cb',
+            mapIconTitle: (data[0] ? '<div class="label_tp">'+(childMarkers.length == 1 ? data[0].label: '')+'<span class="markerAbove markerAboveOne" style="background:' + (data[0].value > 0 ? '#ffd966' : '#8fce00') + ';">' + (data[0].value > 0 ? data[0].value : '') + 
+                   '</span>' : '') + (data[1] ? '<span class="markerAbove markerAboveTwo"   style="background:' + (data[1].value > 0 ? '#e06666': '#8fce00') + ';">' +  (data[1].value > 0 ? data[1].value : '') +
+                   '</span>' : '') + (data[2] ? '<span class="markerAbove markerAboveThree" style="background:' + (data[2].value == 0 ? '#8fce00' : (data[2].value < 1000 ? '#ffd966' : '#e06666') ) + ';"> ' + 
+                   '</span>' : '') + (data[3] ? '<span class="markerAbove markerAboveFour"  style="background:' + (data[3].value == 0 ? '#8fce00' : (data[3].value < 1000 ? '#ffd966' : '#e06666') ) + ';"> ' +  
+                   '</span></div>'+ (childMarkers.length > 1 ? '<div class="count_child_markers">'+childMarkers.length+'</div>':'') : '')
+        };
+
+        var defaultIcon = L.divIcon({
+            className: "map-ground-marker",
+            html: L.Util.template(iconSettings.mapIconUrl, iconSettings),
+        });
+        return defaultIcon;
+    }
+});
+/*}*/
