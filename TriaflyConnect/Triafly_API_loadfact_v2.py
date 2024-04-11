@@ -227,7 +227,7 @@ def _load_excel_toTriafly(excel_file):
             if not (strdate in strdate_list):
                 strdate_list.append(strdate)
     print(pu_list_filtr_all)
-    cnt_in_filtr = 25
+    cnt_in_filtr = 50
     cur_cnt_in_filtr = cnt_in_filtr + 1
     # for index, row in excel_file_df.iterrows():
     #     cur_cnt_in_filtr = cur_cnt_in_filtr + 1
@@ -404,12 +404,12 @@ def _load_excel_toTriafly(excel_file):
                 lpull_list_values.append(dictValue)
                 # print(lpull_list_values)
 
-            if len(ldel_list_values) > 999:
+            if len(ldel_list_values) > 9999:
                 print(datetime.datetime.now(),'delete values')
                 triafly_conn.delete_objects(ldel_list_values)
                 print(datetime.datetime.now(), 'end delete values')
                 ldel_list_values = []
-            if len(lupd_dict_values) > 999:
+            if len(lupd_dict_values) > 9999:
                 print(datetime.datetime.now(), 'update values')
                 triafly_conn.update_objects(lupd_dict_values)
                 print(datetime.datetime.now(), 'end update values')
