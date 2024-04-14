@@ -171,6 +171,8 @@ def _load_excel_toTriafly(excel_file):
     #     for column in column_list_raw:
     #         print(datetime.datetime.now(),'catalog_TipPu_df column ', column, '| value = ',row[column])
 
+    type_element_filial = int(get_id_catalog_by_value(rspn_TypeElemElectr, 'Филиал'))
+
     type_element_serial_pu = int(get_id_catalog_by_value(rspn_TypeElemElectr,'Серийный номер ПУ'))
     type_element_transform = int(get_id_catalog_by_value(rspn_TypeElemElectr,'ПУ трансформатора'))
     print(datetime.datetime.now(), "Читатем EXCEL-файл", excel_file)
@@ -202,9 +204,31 @@ def _load_excel_toTriafly(excel_file):
         if pu_df.empty:
             print('1 !!!!!!!!!!!!!!!!!!!!!!!!!!! не нашли прибор учета!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!',
                   str(row['Серийный номер ПУ']))
+
+            triaflyRegistr_ElectroStructure = 2605550  # реестр Э_Структура сети полная
+            type_element = 'Серийный номер ПУ'
+            id_type_element = get_id_catalog_by_value(rspn_TypeElemElectr, type_element)
+
+
+            listvalue = [row['Серийный номер ПУ']  # 'Название'
+                        , 18948991  # 'Э_Структура электросети = nan  филиал'
+                        , id_type_element  # 'Э_тип элемента справочника электросети '
+                        , row['Серийный номер ПУ']  # 'Э_структура электросети варианты названия в опросном листе'
+                        , ''  # 'Э_Тип ПУ'
+                        , ''  # 'Э_Населенный пункт'
+                        , ''  # 'Долгота'
+                        , ''  # 'Широта'
+                        , ''  # 'Э_Пропускная способность сил. тр-та, кВт'
+                        , ''  # 'Э_АВ трансформатора (автоматический выключатель/рубильник)'
+                        , ''  # 'Э_Коэффициент трансформации тока Ктт'
+                        , ''  # 'Э_АВ линии (автоматический выключатель/рубильник)'
+                        , ''
+                         ]
+            triafly_conn.put([listvalue], triaflyRegistr_ElectroStructure)
+
             # удяляем строку из набора данных
-            excel_file_df.drop(index = excel_file_df.index)
-            continue
+            # excel_file_df.drop(index = excel_file_df.index)
+            # continue
 
         seriap_pu = pu_df['id'].values[0]
         pu_list_filtr_all.append(str(seriap_pu))
@@ -309,6 +333,7 @@ def _load_excel_toTriafly(excel_file):
             if typeelem == type_element_serial_pu:  # это абонент
                 MoreThenP09 = 0
                 MoreThenP = 0
+                if str(pu_df['Э_Тип ПУ'].values[0]) == 'nan' : continue
 
                 tip_pu_name = get_value_catalog_by_id(rspn_TipPuID, pu_df['Э_Тип ПУ'].values[0])
                 # print('tip_pu_name = ',tip_pu_name)
@@ -504,11 +529,30 @@ def splitexcel(path_attach, excel_file):
                 ((catalog_ElectroStructure_df['Название'] == str(row['Серийный номер ПУ'])) & (
                         catalog_ElectroStructure_df['Э_тип элемента справочника электросети'] == typeelem))]
         if pu_df.empty:
-            print('1 !!!!!!!!!!!!!!!!!!!!!!!!!!! не нашли прибор учета!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!',
+            print('0 !!!!!!!!!!!!!!!!!!!!!!!!!!! не нашли прибор учета!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!',
                   str(row['Серийный номер ПУ']))
+            triaflyRegistr_ElectroStructure = 2605550  # реестр Э_Структура сети полная
+            type_element = 'Серийный номер ПУ'
+            id_type_element = get_id_catalog_by_value(rspn_TypeElemElectr, type_element)
+
+            listvalue = [row['Серийный номер ПУ']  # 'Название'
+                , 18948991  # 'Э_Структура электросети = nan  филиал'
+                , id_type_element  # 'Э_тип элемента справочника электросети '
+                , row['Серийный номер ПУ']  # 'Э_структура электросети варианты названия в опросном листе'
+                , ''  # 'Э_Тип ПУ'
+                , ''  # 'Э_Населенный пункт'
+                , ''  # 'Долгота'
+                , ''  # 'Широта'
+                , ''  # 'Э_Пропускная способность сил. тр-та, кВт'
+                , ''  # 'Э_АВ трансформатора (автоматический выключатель/рубильник)'
+                , ''  # 'Э_Коэффициент трансформации тока Ктт'
+                , ''  # 'Э_АВ линии (автоматический выключатель/рубильник)'
+                , ''
+                         ]
+            triafly_conn.put([listvalue], triaflyRegistr_ElectroStructure)
             # удяляем строку из набора данных
-            excel_file_df.drop(index = excel_file_df.index)
-            continue
+            # excel_file_df.drop(index = excel_file_df.index)
+            # continue
     cnt_rows_to_split = 100
     for i in range(0, len(excel_file_df.index), cnt_rows_to_split):
         excel_file_df_split = excel_file_df[i:(i + cnt_rows_to_split)]
@@ -526,13 +570,13 @@ def splitexcel(path_attach, excel_file):
 print(datetime.datetime.now(),'Обрабатываем файлы "ТУ на ПС с показаниями"')
 path_attach = "./attachments/"
 path_archive = "./attachments/archive/"
-filedataset = os.listdir(path_attach)
+
 
 
 
 # _load_excel_toTriafly("./attachments/2024-04-05_130248.977648_06. Ту на ПС с показаниями, 30 минут.xlsx")
 
-
+filedataset = os.listdir(path_attach)
 for file in filedataset:
     filefullpath = path_attach+file
     if os.path.isfile(filefullpath):
@@ -541,6 +585,7 @@ for file in filedataset:
             splitexcel(path_attach,filefullpath)
             os.replace(path_attach+file, path_archive+file)
 
+filedataset = os.listdir(path_attach)
 for file in filedataset:
     filefullpath = path_attach+file
     if os.path.isfile(filefullpath):

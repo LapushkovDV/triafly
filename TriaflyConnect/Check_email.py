@@ -55,14 +55,16 @@ for letter in unread_letters_uids_list:
     letter_id = msg["Message-ID"] #айди письма
     letter_from = msg["Return-path"] # e-mail отправителя
     # subject_rus = decode_header(msg["Subject"])[0][0].decode()
-    subject_rus = from_subj_decode(msg["Subject"])
-
-    print(letter_id, letter_from, subject_rus)
+    # subject_rus = from_subj_decode(msg["Subject"])
+    letter_from = letter_from.replace('>','')
+    letter_from = letter_from.replace('<', '')
+    print(letter_id, letter_from)
 
     for part in msg.walk():
         if part.get_content_disposition() == 'attachment':
-            fileName = datetime.datetime.now().strftime("%Y-%m-%d_%H%M%S.%f_")+from_subj_decode(part.get_filename())
+            fileName = datetime.datetime.now().strftime("%Y-%m-%d_%H%M%S.%f_")+'_'+letter_from+'_'+from_subj_decode(part.get_filename())
             print(fileName)
+
             if bool(fileName):
                 filePath = os.path.join(detach_dir, 'attachments', fileName)
                 #os.remove(filePath)
@@ -73,5 +75,6 @@ for letter in unread_letters_uids_list:
                     # print('Скачали вложение. запускаем загрузку в триафлай')
                     # Triafly_API_loadfact._load_excel_toTriafly(filePath)
 # imap.logout()
+import Triafly_API_loadfact_nebalance
 import Triafly_API_Load_ElectroStructure
 import Triafly_API_loadfact_v2

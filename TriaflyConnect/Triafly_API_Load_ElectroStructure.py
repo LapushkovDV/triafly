@@ -399,9 +399,26 @@ def _load_excel_electroStructure_toTriafly(excel_file):
         # ['ПЭС', '2576583']
         # id_type_element = get_id_catalog_by_value(rspn_TypeElemElectr, 'ПЭС')
         abonent_name = row['Unnamed: 0']
-        element_name = row['Unnamed: 1']
+
+
+        filial = str(row['Unnamed: 1'])
+        res = str(row['Unnamed: 2'])
+
+        if filial.find('сногорский РЭС') != -1 or res.find('сногорский РЭС') != -1:
+            #  костыль на ясногорский рэс... структура совсем кривая там
+            filial = 'Тулэнерго'
+            res = 'Ясногорский РЭС'
+
+        print('filial=',filial)
+        print('res=',res)
+
+        element_name = filial
         catalog_ElectroStructure_df,_idParent = get_insert_catalog(triafly_conn, catalog_ElectroStructure_df,registry_ElectroStructure_df, catalog_ElectroStructure,
-                       triaflyRegistr_ElectroStructure, _idParent, element_name,rspn_TypeElemElectr, 'ПЭС', '','','','')
+                       triaflyRegistr_ElectroStructure, _idParent, element_name,rspn_TypeElemElectr, 'Филиал', '','','','')
+
+        element_name = res
+        catalog_ElectroStructure_df,_idParent = get_insert_catalog(triafly_conn, catalog_ElectroStructure_df,registry_ElectroStructure_df, catalog_ElectroStructure,
+                       triaflyRegistr_ElectroStructure, _idParent, element_name,rspn_TypeElemElectr, 'РЭС', '','','','')
 
         #['ПС', '2576584'],
         # id_type_element = get_id_catalog_by_value(rspn_TypeElemElectr, 'ПС')
