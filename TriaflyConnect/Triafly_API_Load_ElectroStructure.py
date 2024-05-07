@@ -21,16 +21,16 @@ def get_id_catalog_by_value(catalog, value):
             return one_elem[1]
     return ''
 def getnamecatalogtosearch(registry_ElectroStructure_df, parentid, element_name):
-    # print('getnamecatalogtosearch element_name =', element_name)
+    # print('ge1tnamecatalogtosearch element_name =', element_name)
     element_name = str(element_name)
     if parentid == '':
         _row = registry_ElectroStructure_df[
             ((registry_ElectroStructure_df['Э_Структура электросети'].isna()) & (
-                    registry_ElectroStructure_df['Э_структура электросети варианты названия в опросном листе'].str.contains(element_name)))]
+                    registry_ElectroStructure_df['Э_структура электросети варианты названия в опросном листе'].str.contains(element_name, regex=False)))]
     else:
         _row = registry_ElectroStructure_df[
             ((registry_ElectroStructure_df['Э_Структура электросети'] == parentid) & (
-                    registry_ElectroStructure_df['Э_структура электросети варианты названия в опросном листе'].str.contains(element_name)))]
+                    registry_ElectroStructure_df['Э_структура электросети варианты названия в опросном листе'].str.contains(element_name, regex=False)))]
     if _row.empty:
         return element_name, False
     else:

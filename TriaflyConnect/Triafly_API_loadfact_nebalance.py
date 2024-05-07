@@ -156,7 +156,7 @@ def _load_excel_nebalance_toTriafly(excel_file):
     print('parameter= ',parameter)
     registry_nebalance_df = triafly_conn.get_registry(registry_nebalance, parameter)
     # print('registry_nebalance_d', registry_nebalance_df)
-
+    listvalue_all = []
     for index, row in excel_file_df.iterrows():
         # print('row', row)
         if pd.isnull(row['Питающий Центр\nВЛ/фидер 10(6) кВ']):
@@ -273,10 +273,16 @@ def _load_excel_nebalance_toTriafly(excel_file):
                         ,nebal_perc
                         ,strdate
                         ]
-            print('inserting  listvalue = ',listvalue)
-            triafly_conn.put([listvalue], 14757084)
+            listvalue_all.append(listvalue)
+        if len(listvalue_all) > 999:
+            print('listvalue_all=',listvalue_all)
+            print('inserting  listvalue_all=')
+            triafly_conn.put(listvalue_all, 14757084)
+            listvalue_all = []
 
-
+    if len(listvalue_all) > 0:
+        print('inserting  listvalue_all ')
+        triafly_conn.put(listvalue_all, 14757084)
 
 # Произведем новую сессию загрузки данных
 
