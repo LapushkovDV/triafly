@@ -585,6 +585,7 @@ for file in filedataset:
             splitexcel(path_attach,filefullpath)
             os.replace(path_attach+file, path_archive+file)
 
+path_archive = "./attachments/archive/_split/"
 filedataset = os.listdir(path_attach)
 for file in filedataset:
     filefullpath = path_attach+file
