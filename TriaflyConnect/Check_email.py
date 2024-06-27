@@ -74,7 +74,7 @@ for letter in unread_letters_uids_list:
                     fp.close()
                     # print('Скачали вложение. запускаем загрузку в триафлай')
                     # Triafly_API_loadfact._load_excel_toTriafly(filePath)
-# imap.logout()
+imap.logout()
 import Triafly_API_Load_ElectroStructure
 import Triafly_API_loadfact_nebalance
 import Triafly_API_loadfact_v2
